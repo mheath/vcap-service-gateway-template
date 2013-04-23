@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+		xmlns="http://www.springframework.org/schema/beans"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xmlns:nats="http://mheath.github.com/jnats/schema/spring/nats"
+		xmlns:vcap="http://mheath.github.com/vcap-spring/schema/spring/vcap"
+		xsi:schemaLocation="
+			http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+			http://mheath.github.com/jnats/schema/spring/nats http://mheath.github.com/jnats/schema/spring/nats-0.5.xsd
+			http://mheath.github.com/vcap-spring/schema/spring/vcap http://mheath.github.com/vcap-spring/schema/spring/vcap-0.1.xsd
+		"
+		default-lazy-init="true">
+
+	<!-- Load Spring properties from a YAML config file. -->
+	<vcap:yaml-properties resource="file:config/gateway.yml" />
+
+	<!-- Create a pid file that automatically gets deleted when Spring shuts down to better integrate with BOSH/monit -->
+	<vcap:pid-file file="${pidfile}" />
+
+	<!-- Create Netty event loop groups to be shared by NATS and HTTP server(s) -->
+	<vcap:netty-event-loop-group id="parentEventLoopGroup" />
+	<vcap:netty-event-loop-group id="childEventLoopGroup" />
+
+	<!-- Connect to the NATS message bus -->
+	<nats:nats event-loop-group-ref="childEventLoopGroup">
+		<nats:url>${nats.url}</nats:url>
+	</nats:nats>
+
+	<!-- Publish the service gateway's address to NATS to route to the gateway through the vcap routers. -->
+	<vcap:nats>
+		<vcap:router-register host="${host.local}" port="${host.port}">
+			<vcap:uri>${host.public}</vcap:uri>
+			<vcap:uri>funkymonkey.app2-dev.lds.org</vcap:uri>
+		</vcap:router-register>
+	</vcap:nats>
+
+	<vcap:cloud-controller-client host="${cloudControllerUrl}" />
+
+	<vcap:client-token client-name="${client.name}" client-secret="${client.secret}" />
+
+	<!-- Create an HTTP server to be used by the service gateway to handle REST calls from the Cloud Controller -->
+	<vcap:http-server
+			id="gatewayHttpServer"
+			host="${host.local}"
+			port="${host.port}"
+			parent-netty-event-loop-ref="parentEventLoopGroup"
+			child-netty-event-loop-ref="childEventLoopGroup"
+			/>
+
+	<!-- Create the service gateway -->
+	<vcap:service-gateway
+			provisioner-ref="provisioner"
+			http-server-ref="gatewayHttpServer"
+			auth-token="${serviceAuthToken}">
+		<!-- If the service hasn't been registered with the Cloud Controller, do so automatically at startup -->
+		<vcap:bootstrap
+				label="test"
+				provider="ICS"
+				version="0.1"
+				url="http://${host.public}"
+				description="This is a test service"
+				info-url="http://${host.public}/info"
+				>
+			<vcap:plan name="Default" description="The best service plan... ever."/>
+		</vcap:bootstrap>
+	</vcap:service-gateway>
+
+	<!-- Change this to customize the service gateway behavior -->
+	<bean id="provisioner" class="example.ServiceProvisioner" />
+
+</beans>

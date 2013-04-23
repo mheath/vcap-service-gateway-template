@@ -1,0 +1,18 @@
+---
+pidfile: /tmp/gateway.pid
+
+nats:
+  url: nats://nats:password@10.118.216.201:4222
+
+cloudControllerUrl: https://api.app2-dev.lds.org
+
+host:
+  local: 10.109.18.110
+  public: service-gateway.app2-dev.lds.org
+  port: 8080
+
+client:
+  name: servicegateway
+  secret: gatewaysecret
+
+serviceAuthToken: thisisasecret

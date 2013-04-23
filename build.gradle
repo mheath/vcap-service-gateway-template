@@ -1,0 +1,30 @@
+apply plugin: 'java'
+
+sourceCompatibility = "1.7"
+targetCompatibility = "1.7"
+version='0.1'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+def logbackVersion = '1.0.6'
+def slf4jVersion = '1.6.5'
+def springVersion = '3.2.2.RELEASE'
+def vcapComponentVersion = '0.1-SNAPSHOT'
+
+configurations {
+	all*.exclude group: 'commons-logging', module: 'commons-logging'
+}
+
+dependencies {
+	compile 'com.github.mheath:vcap-service-gateway:' + vcapComponentVersion
+	compile 'com.github.mheath:vcap-spring:' + vcapComponentVersion
+
+	compile 'org.slf4j:jcl-over-slf4j:' + slf4jVersion
+
+	compile 'org.springframework:spring-context:' + springVersion
+
+	runtime 'ch.qos.logback:logback-classic:' + logbackVersion
+}
